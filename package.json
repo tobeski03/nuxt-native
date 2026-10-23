@@ -1,0 +1,17 @@
+{
+  "name": "nuxt-native",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Nuxt-shaped native Android runtime and compiler spike.",
+  "scripts": {
+    "test": "node --test",
+    "compile:example": "node src/cli.mjs examples/profile.vue"
+  },
+  "devDependencies": {
+    "@vue/compiler-dom": "^3.5.22"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
