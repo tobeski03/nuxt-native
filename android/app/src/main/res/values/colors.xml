@@ -1,0 +1,7 @@
+<resources>
+    <color name="nn_primary">#2563EB</color>
+    <color name="nn_background">#F9FAFB</color>
+    <color name="nn_on_primary">#FFFFFF</color>
+    <color name="nn_on_background">#111827</color>
+    <color name="nn_status_bar">#F9FAFB</color>
+</resources>

@@ -1,0 +1,32 @@
+{
+  "capabilities": [
+    "core",
+    "network",
+    "device",
+    "storage",
+    "permissions",
+    "filesystem",
+    "notifications",
+    "media",
+    "sensors",
+    "dialog",
+    "clipboard"
+  ],
+  "permissions": [
+    "android.permission.INTERNET",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.CAMERA"
+  ],
+  "appConfig": {
+    "showcaseLabel": "THE NATIVE EDGE"
+  },
+  "android": {
+    "manifest": "android/app/src/main/AndroidManifest.xml",
+    "applicationId": "com.nuxtnative.prototype",
+    "label": "Nuxt-native",
+    "versionCode": 1,
+    "versionName": "0.1.0",
+    "minSdk": 26,
+    "targetSdk": 36
+  }
+}

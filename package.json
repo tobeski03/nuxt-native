@@ -1,17 +1,65 @@
 {
   "name": "nuxt-native",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "bin": {
+    "nuxt-native": "src/cli.mjs"
+  },
   "type": "module",
-  "description": "A Nuxt-shaped native Android runtime and compiler spike.",
+  "description": "Build real native Android apps with Nuxt-shaped Vue and TypeScript.",
+  "keywords": [
+    "nuxt",
+    "vue",
+    "native",
+    "android",
+    "mobile",
+    "compiler",
+    "tailwind"
+  ],
+  "license": "MIT",
+  "files": [
+    "android/build.gradle",
+    "android/settings.gradle",
+    "android/app/build.gradle",
+    "android/app/libs",
+    "android/app/src/main/AndroidManifest.xml",
+    "android/app/src/main/java",
+    "android/app/src/main/res",
+    "docs",
+    "src",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tobeski03/nuxt-native.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tobeski03/nuxt-native/issues"
+  },
+  "homepage": "https://github.com/tobeski03/nuxt-native#readme",
   "scripts": {
+    "check": "npm test",
     "test": "node --test",
-    "compile:example": "node src/cli.mjs examples/profile.vue"
+    "prepublishOnly": "npm test",
+    "build": "node src/cli.mjs build",
+    "package": "node src/cli.mjs package",
+    "compile:example": "node src/cli.mjs examples/profile.vue",
+    "generate:ir": "node src/generate-ir.mjs",
+    "generate:fixtures": "node src/generate-fixtures.mjs"
   },
   "devDependencies": {
-    "@vue/compiler-dom": "^3.5.22"
+    "clsx": "^2.1.1"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@vue/compiler-dom": "^3.5.22",
+    "esbuild": "^0.28.2"
   }
 }

@@ -28,6 +28,13 @@ async function saveProfile() {
       >
         {{ saving ? 'Saving…' : 'Save changes' }}
       </button>
+
+      <NuxtLink
+        to="/settings"
+        class="w-full mt-3 text-blue-600"
+      >
+        Open settings
+      </NuxtLink>
     </section>
   </main>
 </template>

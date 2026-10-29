@@ -11,8 +11,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        flatDir { dirs "$rootDir/app/libs" }
     }
 }
 
-rootProject.name = 'NuxtNative'
+rootProject.name = 'Nuxt-native'
 include ':app'

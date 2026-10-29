@@ -1,0 +1,21 @@
+# The package contains the Android host template, not a built app.
+android/.gradle/
+android/build/
+android/local.properties
+android/app/build/
+android/app/src/main/assets/
+
+# Repository-only fixtures and device captures.
+app/
+server/
+apk-check/
+quickjs-inspect/
+quickjs-inspect-*/
+/*.png
+/*.xml
+/*.zip
+/*.tgz
+
+# Local development state.
+.gradle-isolated/
+node_modules/
