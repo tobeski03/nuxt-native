@@ -7,7 +7,7 @@ Build native Android apps with a Nuxt-shaped Vue project. Write pages and compon
 Inside the application you want to build:
 
 ```bash
-npm install -D nuxt-native
+npm install -D @tobeski03/nuxt-native
 ```
 
 Create a starter project:

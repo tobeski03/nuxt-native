@@ -1097,6 +1097,15 @@ test('compiles inline template expressions into declared native actions', async 
   assert.deepEqual(JSON.parse(context.result), { count: 3 })
 })
 
+test('unwraps refs for inline template mutations', async () => {
+  const result = await compilePageScript('<script setup>const count = ref(0)</script>', {
+    inlineActions: [{ name: '__nuxtInlineAction0', expression: 'count++' }]
+  })
+  const context = { __nuxtStateChanged: { changed() {} } }
+  vm.runInNewContext(`${result.code}\n__nuxtInlineAction0(); result = __nuxtSnapshot()`, context)
+  assert.deepEqual(JSON.parse(context.result), { count: 1 })
+})
+
 test('snapshots non-ref component bindings for native component templates', async () => {
   const result = await compilePageScript('<script setup>const ready = ref(false)</script>', {
     componentScripts: [{

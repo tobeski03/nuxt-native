@@ -17,7 +17,7 @@ test('requires an explicit serial when multiple devices are ready', () => {
 
 test('builds the default native activity component', () => {
   assert.equal(defaultActivity(), 'com.nuxtnative.prototype/.MainActivity')
-  assert.equal(defaultActivity('com.example.app'), 'com.example.app/.MainActivity')
+  assert.equal(defaultActivity('com.example.app'), 'com.example.app/com.nuxtnative.prototype.MainActivity')
 })
 
 test('exposes SDK discovery without requiring a project-local path', () => {

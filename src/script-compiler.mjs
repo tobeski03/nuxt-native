@@ -223,6 +223,15 @@ function identifiers(source) {
   return new Set([...String(source ?? '').matchAll(/\b[A-Za-z_$][A-Za-z0-9_$]*\b/g)].map(match => match[0]))
 }
 
+function rewriteInlineRefExpressions(expression, refNames) {
+  let result = String(expression ?? '')
+  for (const name of [...new Set(refNames)].sort((left, right) => right.length - left.length)) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    result = result.replace(new RegExp(`(?<![A-Za-z0-9_$\.])${escaped}(?!\\s*\\.)`, 'g'), `${name}.value`)
+  }
+  return result
+}
+
 // Template expressions can reference setup bindings that are not refs (for
 // example `const device = useNativeDevice()`). The native renderer does not
 // execute a browser template scope, so expose those top-level bindings in the
@@ -540,7 +549,7 @@ __nuxtNotifyWatchers = function() { for (var index = 0; index < __nuxtWatchers.l
   }
   for (const action of inlineActions) {
     if (!action || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(action.name) || typeof action.expression !== 'string') continue
-    code += `function ${action.name}($event) { return (${action.expression}); }\n`
+    code += `function ${action.name}($event) { return (${rewriteInlineRefExpressions(action.expression, stateRefs)}); }\n`
   }
   const pageStateRefs = [...new Set([...stateRefs, ...keyedStateRefs, ...destructuredStateRefs])]
   const snapshotBindings = topLevelBindingNames(setupBody)

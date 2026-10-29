@@ -17,7 +17,7 @@ The compiler itself can generate assets without an Android device. Device builds
 For an application, install the framework locally:
 
 ```sh
-npm install -D nuxt-native
+npm install -D @tobeski03/nuxt-native
 ```
 
 Then use the project-local CLI:
@@ -31,7 +31,7 @@ npx nuxt-native build .
 Installing locally is recommended because it records the framework version in the application lockfile. A global installation is also supported:
 
 ```sh
-npm install -g nuxt-native
+npm install -g @tobeski03/nuxt-native
 nuxt-native init my-app
 ```
 

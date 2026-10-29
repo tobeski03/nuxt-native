@@ -95,6 +95,7 @@ export function selectDevice(output, requestedSerial = null) {
   return devices[0]
 }
 
-export function defaultActivity(applicationId = 'com.nuxtnative.prototype') {
-  return `${applicationId}/.MainActivity`
+export function defaultActivity(applicationId = 'com.nuxtnative.prototype', activityPackage = 'com.nuxtnative.prototype') {
+  const activityName = activityPackage === applicationId ? '.MainActivity' : `${activityPackage}.MainActivity`
+  return `${applicationId}/${activityName}`
 }
