@@ -1,4 +1,4 @@
-import { access, mkdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
 const files = {
@@ -16,8 +16,26 @@ const files = {
 
 export async function initProject(directory) {
   const root = resolve(directory)
+  const frameworkPackage = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
+  const projectFiles = {
+    ...files,
+    'package.json': `${JSON.stringify({
+      name: 'nuxt-native-app',
+      private: true,
+      type: 'module',
+      scripts: {
+        dev: 'nuxt-native dev .',
+        build: 'nuxt-native build .',
+        android: 'nuxt-native run .',
+        qr: 'nuxt-native run . --qr',
+        package: 'nuxt-native package .'
+      },
+      engines: { node: '>=20' },
+      devDependencies: { [frameworkPackage.name]: `^${frameworkPackage.version}` }
+    }, null, 2)}\n`
+  }
   await mkdir(root, { recursive: true })
-  for (const [relative, contents] of Object.entries(files)) {
+  for (const [relative, contents] of Object.entries(projectFiles)) {
     const target = join(root, relative)
     try {
       await access(target)
@@ -28,5 +46,5 @@ export async function initProject(directory) {
     await mkdir(join(target, '..'), { recursive: true })
     await writeFile(target, contents, 'utf8')
   }
-  return { root, files: Object.keys(files) }
+  return { root, files: Object.keys(projectFiles) }
 }

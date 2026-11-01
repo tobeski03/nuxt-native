@@ -25,7 +25,8 @@ Then use the project-local CLI:
 ```sh
 npx nuxt-native init my-app
 cd my-app
-npx nuxt-native build .
+npm install
+npm run android
 ```
 
 Installing locally is recommended because it records the framework version in the application lockfile. A global installation is also supported:
@@ -91,6 +92,32 @@ Use `run` for the complete device loop:
 ```sh
 npx nuxt-native run . --serial <device-id>
 ```
+
+Projects created with `init` also provide familiar npm scripts:
+
+```sh
+npm run dev       # rebuild while editing
+npm run build     # compile native assets
+npm run android   # build, install, and launch
+npm run qr        # build, install, and show wireless HMR QR code
+npm run package   # create a release artifact
+```
+
+For development on a connected Android device, use the native HMR bridge:
+
+```sh
+npx nuxt-native run . --hmr --serial <device-id>
+```
+
+This builds and installs the debug app once, then watches your Nuxt-shaped source files. When a page, component, middleware, plugin, server handler, or configuration file changes, the CLI regenerates the native assets and the running debug app reloads the current route over the development bridge. The debug app must stay connected to the same computer, and the bridge is only enabled for this development command; release packages continue to use bundled assets.
+
+If USB HMR is inconvenient, use the wireless QR flow:
+
+```sh
+npx nuxt-native run . --qr
+```
+
+The CLI prints a QR code in the terminal. Scan it with the phone camera while the debug app is installed. The phone and computer must be on the same Wi-Fi or local network. The QR contains a temporary connection token and is valid only while this command is running. Wireless HMR changes how the debug app receives route assets; it does not disable native APIs or change release builds.
 
 This compiles the project, writes a local SDK path when one is discoverable, assembles the debug APK, installs it with ADB, and launches the configured Android activity. The `--serial`, `--adb`, and `--gradle` options are optional when the machine has one discoverable device and standard tools.
 

@@ -1,6 +1,6 @@
 {
   "name": "@tobeski03/nuxt-native",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "bin": {
     "nuxt-native": "src/cli.mjs"
@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "@vue/compiler-dom": "^3.5.22",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "qrcode": "^1.5.4"
   }
 }

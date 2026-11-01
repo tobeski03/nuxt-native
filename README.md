@@ -15,7 +15,8 @@ Create a starter project:
 ```bash
 npx nuxt-native init my-app
 cd my-app
-npx nuxt-native run .
+npm install
+npm run android
 ```
 
 For local development, Node.js 20 or newer and an Android SDK are required. `run` also needs Gradle and ADB, plus a connected Android device or emulator.
@@ -29,6 +30,12 @@ npx nuxt-native build .
 # Rebuild automatically while editing
 npx nuxt-native dev .
 
+# Run on Android with native development reloads
+npx nuxt-native run . --hmr --serial <device-id>
+
+# Run with wireless QR-based development reloads
+npm run qr
+
 # Build, install, and open the app on Android
 npx nuxt-native run .
 
@@ -39,7 +46,11 @@ npx nuxt-native package . --profile release --format apk
 npx nuxt-native package . --profile release --format aab
 ```
 
-Run `npx nuxt-native help` for all options. If Android tools are not found automatically, pass `--gradle`, `--adb`, or `--serial`, or configure `NUXT_NATIVE_ANDROID_SDK`, `NUXT_NATIVE_GRADLE`, and `NUXT_NATIVE_ADB`.
+Projects created with `init` include `dev`, `build`, `android`, `qr`, and `package` scripts. Run `npx nuxt-native help` for all CLI options. If Android tools are not found automatically, pass `--gradle`, `--adb`, or `--serial`, or configure `NUXT_NATIVE_ANDROID_SDK`, `NUXT_NATIVE_GRADLE`, and `NUXT_NATIVE_ADB`.
+
+`--hmr` is a debug development mode. It keeps the Android host installed while changed native route assets are served from the development machine and reloaded on the phone. It requires a connected, authorized device and is not included in release builds.
+
+`--qr` enables the same development reloads over the local network. Scan the QR code printed in the terminal with the phone camera. The phone and computer must be on the same network. The connection uses a temporary token and is available only while the command is running.
 
 ## Project structure
 

@@ -8,6 +8,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -22,6 +24,10 @@ import org.json.JSONArray;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -29,6 +35,11 @@ import java.nio.file.NoSuchFileException;
 public final class MainActivity extends Activity {
     private NativeRouter router;
     private NativeServer server;
+    private String devServerBase = "";
+    private String devServerToken = "";
+    private volatile boolean hmrRunning;
+    private final Handler hmrHandler = new Handler(Looper.getMainLooper());
+    private String hmrVersion = "";
 
     @Override
     public void onCreate(Bundle state) {
@@ -36,6 +47,8 @@ public final class MainActivity extends Activity {
         FrameLayout host = new FrameLayout(this);
         setContentView(host);
         try {
+            configureDevServer();
+            configureDevServerFromIntent(getIntent());
             server = new NativeServer(this::readAsset);
             server.loadManifest();
             SharedPreferences preferences = getSharedPreferences("nuxt_native", MODE_PRIVATE);
@@ -151,6 +164,7 @@ public final class MainActivity extends Activity {
             router = new NativeRouter(host, actionDispatcher(), this::readAsset, server::fetch, server::fetchAsync, device, storage, capabilities, null, fileSystem, notifications, null, null, dialogs);
             router.loadManifest();
             router.start(routeFromIntent(getIntent()));
+            startHmrPolling();
         } catch (Exception error) {
             android.util.Log.e("NuxtNative", "Unable to start native route host", error);
             showStartupError(host, error);
@@ -172,6 +186,13 @@ public final class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        boolean wirelessConnection = configureDevServerFromIntent(intent);
+        if (wirelessConnection && router != null) {
+            hmrVersion = "";
+            if (!hmrRunning) startHmrPolling();
+            try { router.reloadCurrent(); }
+            catch (Exception error) { router.showError(error); }
+        }
         if (router != null) {
             try { router.push(routeFromIntent(intent)); }
             catch (Exception error) { router.showError(error); }
@@ -254,18 +275,101 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        hmrRunning = false;
+        hmrHandler.removeCallbacksAndMessages(null);
         if (router != null) router.close();
         if (server != null) server.close();
         super.onDestroy();
     }
 
     private String readAsset(String name) throws Exception {
+        if (!devServerBase.isEmpty()) {
+            try { return readDevAsset(name); }
+            catch (Exception ignored) { }
+        }
+        return readBundledAsset(name);
+    }
+
+    private String readBundledAsset(String name) throws Exception {
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open(name)))) {
             String line;
             while ((line = reader.readLine()) != null) result.append(line);
         }
         return result.toString();
+    }
+
+    private void configureDevServer() {
+        try {
+            JSONObject config = new JSONObject(readBundledAsset("native-config.json"));
+            JSONObject devServer = config.optJSONObject("devServer");
+            if (devServer != null) {
+                devServerBase = devServer.optString("url", "").replaceAll("/+$", "");
+                devServerToken = devServer.optString("token", "");
+            }
+            if (!devServerBase.isEmpty()) android.util.Log.i("NuxtNativeHMR", "Dev server: " + devServerBase);
+        } catch (Exception ignored) {
+            devServerBase = "";
+            devServerToken = "";
+        }
+    }
+
+    private boolean configureDevServerFromIntent(Intent intent) {
+        Uri data = intent == null ? null : intent.getData();
+        if (data == null || !"nuxtnative".equalsIgnoreCase(data.getScheme()) || !"connect".equalsIgnoreCase(data.getHost())) return false;
+        String url = data.getQueryParameter("url");
+        String token = data.getQueryParameter("token");
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://")) || token == null || token.trim().isEmpty()) return false;
+        devServerBase = url.replaceAll("/+$", "");
+        devServerToken = token;
+        android.util.Log.i("NuxtNativeHMR", "Connected wirelessly to " + devServerBase);
+        return true;
+    }
+
+    private String readDevAsset(String name) throws Exception {
+        String separator = devServerBase.contains("?") ? "&" : "?";
+        String tokenQuery = devServerToken.isEmpty() ? "" : separator + "token=" + URLEncoder.encode(devServerToken, StandardCharsets.UTF_8.name());
+        HttpURLConnection connection = (HttpURLConnection) new URL(devServerBase + "/" + name + tokenQuery).openConnection();
+        connection.setConnectTimeout(2000);
+        connection.setReadTimeout(3000);
+        connection.setUseCaches(false);
+        connection.setRequestProperty("Cache-Control", "no-cache");
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) throw new java.io.IOException("Dev asset unavailable");
+        StringBuilder result = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) result.append(line).append('\n');
+        } finally {
+            connection.disconnect();
+        }
+        return result.toString();
+    }
+
+    private void startHmrPolling() {
+        if (devServerBase.isEmpty() || hmrRunning) return;
+        hmrRunning = true;
+        Thread poller = new Thread(() -> {
+            while (hmrRunning) {
+                try {
+                    String status = readDevAsset("__nuxt_native_hmr");
+                    String nextVersion = new JSONObject(status).optString("version", "");
+                    if (!hmrVersion.isEmpty() && !hmrVersion.equals(nextVersion)) {
+                        android.util.Log.i("NuxtNativeHMR", "Reloading route assets: " + hmrVersion + " -> " + nextVersion);
+                        hmrHandler.post(() -> {
+                            try { if (router != null) router.reloadCurrent(); }
+                            catch (Exception error) { if (router != null) router.showError(error); }
+                        });
+                    }
+                    hmrVersion = nextVersion;
+                } catch (Exception error) {
+                    android.util.Log.w("NuxtNativeHMR", "Dev bridge unavailable", error);
+                }
+                try { Thread.sleep(450); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
+            }
+        }, "nuxt-native-hmr");
+        poller.setDaemon(true);
+        poller.start();
     }
 
     private void showStartupError(FrameLayout host, Throwable error) {

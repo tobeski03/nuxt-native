@@ -185,6 +185,11 @@ public final class NativeRouter {
     }
 
     public void loadManifest() throws Exception {
+        routeAssets.clear();
+        routeNames.clear();
+        routeMiddleware.clear();
+        middlewareAssets.clear();
+        pluginAssets.clear();
         try {
             JSONObject nativeConfig = new JSONObject(assets.read("native-config.json"));
             JSONArray configuredCapabilities = nativeConfig.optJSONArray("capabilities");
@@ -271,9 +276,7 @@ public final class NativeRouter {
     public void start(String path) {
         boolean restored = restoreNavigationState();
         try {
-            synchronized (pluginValues) { pluginValues.clear(); }
-            pluginMounted = false;
-            for (String asset : pluginAssets.values()) pluginScripts.runPlugin(assets.read(asset));
+            mountPlugins();
         } catch (Throwable error) {
             showError(error);
             return;
@@ -295,6 +298,36 @@ public final class NativeRouter {
         history.clear();
         index = -1;
         push(path);
+    }
+
+    private void mountPlugins() throws Exception {
+        synchronized (pluginValues) { pluginValues.clear(); }
+        pluginMounted = false;
+        for (String asset : pluginAssets.values()) pluginScripts.runPlugin(assets.read(asset));
+    }
+
+    /** Reload the current native route from the development asset bridge. */
+    public void reloadCurrent() throws Exception {
+        String path = currentPath;
+        android.util.Log.i("NuxtNativeHMR", "Reloading native route " + path);
+        persistRuntimeState();
+        if (scripts != null) {
+            clearRuntimeRequests(scripts);
+            scripts.unmounted();
+            scripts.close();
+            scripts = null;
+        }
+        if (middlewareScripts != null) middlewareScripts.close();
+        if (pluginScripts != null) pluginScripts.close();
+        middlewareScripts = null;
+        pluginScripts = null;
+        loadManifest();
+        mountPlugins();
+        render(path);
+        if (pluginScripts != null) {
+            pluginScripts.runPluginHook("app:mounted", "{}");
+            pluginMounted = true;
+        }
     }
 
     public void push(String path) {
