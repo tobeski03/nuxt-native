@@ -284,8 +284,7 @@ public final class MainActivity extends Activity {
 
     private String readAsset(String name) throws Exception {
         if (!devServerBase.isEmpty()) {
-            try { return readDevAsset(name); }
-            catch (Exception ignored) { }
+            return readDevAsset(name);
         }
         return readBundledAsset(name);
     }
@@ -334,7 +333,10 @@ public final class MainActivity extends Activity {
         connection.setReadTimeout(3000);
         connection.setUseCaches(false);
         connection.setRequestProperty("Cache-Control", "no-cache");
-        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) throw new java.io.IOException("Dev asset unavailable");
+        int responseCode = connection.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new java.io.IOException("Dev asset unavailable: " + name + " from " + devServerBase + " (HTTP " + responseCode + ")");
+        }
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
