@@ -84,9 +84,9 @@ function startDevServer(root, port, { wireless = false } = {}) {
   return {
     url,
     token,
-    connectUrlFor(applicationId = 'com.nuxtnative.prototype') {
+    connectUrlFor(_applicationId = 'com.nuxtnative.dev') {
       if (!wireless) return ''
-      return `intent://connect?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}#Intent;scheme=nuxtnative;package=${encodeURIComponent(applicationId)};end`
+      return `nuxtnative://connect?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`
     },
     bump() { version += 1 },
     close() { server.close() }
@@ -94,7 +94,7 @@ function startDevServer(root, port, { wireless = false } = {}) {
 }
 
 async function showWirelessQr(server, applicationId) {
-  console.log(`\n[nuxt-native] Scan this QR code with your phone camera to connect HMR:\n`)
+  console.log(`\n[nuxt-native] Open Nuxt-native Dev and scan this QR code to connect HMR:\n`)
   console.log(await QRCode.toString(server.connectUrlFor(applicationId), { type: 'terminal', small: true }))
   console.log(`[nuxt-native] Wireless HMR: ${server.url}\n`)
 }

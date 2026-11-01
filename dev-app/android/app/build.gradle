@@ -1,0 +1,25 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.nuxtnative.prototype'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.nuxtnative.dev'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+    sourceSets {
+        main {
+            java.srcDirs = ['../../../android/app/src/main/java', 'src/main/java']
+            res.srcDirs = ['../../../android/app/src/main/res']
+        }
+    }
+}
+
+dependencies {
+    implementation(name: 'quickjs-android-0.9.2', ext: 'aar')
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+}

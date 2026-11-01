@@ -180,14 +180,14 @@ Use `nuxt-native.config.json` for Android identity, capabilities, permissions, t
     "versionName": "1.0.0"
   },
   "capabilities": ["core", "network", "storage"],
-  "permissions": [],
+  "permissions": ["android.permission.INTERNET"],
   "runtimeConfig": {
     "public": {}
   }
 }
 ```
 
-Only request the capabilities and Android permissions your app needs.
+Only request the capabilities and Android permissions your app needs. The default `network` capability adds `android.permission.INTERNET` automatically, so fresh projects can use the embedded server and wireless QR development immediately.
 
 ## Release builds
 

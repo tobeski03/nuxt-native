@@ -8,7 +8,7 @@ const files = {
   'nuxt-native.config.json': `${JSON.stringify({
     android: { applicationId: 'com.example.nuxtnative', appName: 'Nuxt-native app' },
     capabilities: ['core', 'network', 'dialog'],
-    permissions: [],
+    permissions: ['android.permission.INTERNET'],
     runtimeConfig: { public: {} }
   }, null, 2)}\n`,
   'README.md': `# Nuxt-native app\n\nThis project uses Nuxt-shaped Vue and TypeScript to generate a native Android app.\n\n## Install the framework\n\nFrom this project directory:\n\n\`\`\`sh\nnpm install -D @tobeski03/nuxt-native\n\`\`\`\n\n## Commands\n\n\`\`\`sh\nnpx nuxt-native build .\nnpx nuxt-native dev .\nnpx nuxt-native run .\nnpx nuxt-native package . --profile release --format apk\n\`\`\`\n\n## Where to write code\n\n- \`app/pages/\` contains file-based routes.\n- \`app/components/\` contains reusable components.\n- \`app/composables/\` contains reusable helpers.\n- \`app/layouts/\` contains page layouts.\n- \`app/middleware/\` contains route guards.\n- \`server/api/\` contains API handlers.\n- \`shared/\` contains code shared by app and server.\n\nUse \`.vue\` files with JavaScript or TypeScript \`<script setup>\`. Use \`nuxt-native.config.json\` for Android identity, capabilities, permissions, and public runtime configuration.\n`

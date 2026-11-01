@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path'
 // Keep non-sensitive framework services available in a fresh project. Device,
 // storage, media, notifications, and permissions remain explicit opt-ins.
 export const defaultNativeCapabilities = ['core', 'network', 'dialog']
+export const defaultNativePermissions = ['android.permission.INTERNET']
 
 const defaultAndroidConfig = {
   applicationId: 'com.nuxtnative.prototype',
@@ -61,13 +62,18 @@ export function normalizeNativeConfig(configured = {}) {
   const appConfig = configured.appConfig && typeof configured.appConfig === 'object' && !Array.isArray(configured.appConfig)
     ? configured.appConfig
     : {}
+  const capabilities = Array.isArray(configured.capabilities)
+    ? configured.capabilities
+    : (Array.isArray(android.capabilities) ? android.capabilities : defaultNativeCapabilities)
+  const configuredPermissions = Array.isArray(configured.permissions)
+    ? configured.permissions
+    : (Array.isArray(android.permissions) ? android.permissions : [])
+  const permissions = capabilities.includes('network')
+    ? [...new Set([...defaultNativePermissions, ...configuredPermissions])]
+    : configuredPermissions
   return {
-    capabilities: Array.isArray(configured.capabilities)
-      ? configured.capabilities
-      : (Array.isArray(android.capabilities) ? android.capabilities : defaultNativeCapabilities),
-    permissions: Array.isArray(configured.permissions)
-      ? configured.permissions
-      : (Array.isArray(android.permissions) ? android.permissions : []),
+    capabilities,
+    permissions,
     runtimeConfig: { public: publicRuntimeConfig },
     appConfig,
     theme: { colors: themeColors },

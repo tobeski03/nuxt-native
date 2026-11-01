@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { defaultNativeCapabilities, normalizeNativeConfig, renderAndroidPermissionBlock, updateAndroidGradle, updateAndroidManifest, updateAndroidSettings } from '../src/native-config.mjs'
+import { defaultNativeCapabilities, defaultNativePermissions, normalizeNativeConfig, renderAndroidPermissionBlock, updateAndroidGradle, updateAndroidManifest, updateAndroidSettings } from '../src/native-config.mjs'
 
 test('normalizes top-level and android-scoped native configuration', () => {
   assert.deepEqual(normalizeNativeConfig({ runtimeConfig: { public: { apiBase: 'https://api.example.test', featureFlag: true }, privateKey: 'never-bundle' }, android: { capabilities: ['camera'], permissions: ['android.permission.CAMERA'] } }), {
@@ -36,6 +36,8 @@ test('preserves project theme colors for compiler/runtime styling', () => {
 test('keeps the non-sensitive dialog bridge available by default', () => {
   assert.deepEqual(defaultNativeCapabilities, ['core', 'network', 'dialog'])
   assert.deepEqual(normalizeNativeConfig({}).capabilities, ['core', 'network', 'dialog'])
+  assert.deepEqual(defaultNativePermissions, ['android.permission.INTERNET'])
+  assert.deepEqual(normalizeNativeConfig({}).permissions, ['android.permission.INTERNET'])
 })
 
 test('normalizes Android deep-link declarations', () => {
