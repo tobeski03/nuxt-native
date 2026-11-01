@@ -32,11 +32,17 @@ function optionValue(values, name) {
 }
 
 function localNetworkAddress() {
-  for (const entries of Object.values(networkInterfaces())) {
+  const candidates = []
+  for (const [name, entries] of Object.entries(networkInterfaces())) {
     for (const entry of entries ?? []) {
-      if (entry.family === 'IPv4' && !entry.internal) return entry.address
+      if (entry.family === 'IPv4' && !entry.internal) candidates.push({ name, address: entry.address })
     }
   }
+  candidates.sort((left, right) => {
+    const wireless = value => /wi-?fi|wireless|wlan/i.test(value) ? 0 : 1
+    return wireless(left.name) - wireless(right.name)
+  })
+  if (candidates[0]) return candidates[0].address
   throw new Error('No local network address found. Connect this computer to Wi-Fi or Ethernet first.')
 }
 
