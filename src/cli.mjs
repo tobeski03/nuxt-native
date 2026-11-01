@@ -84,16 +84,29 @@ function startDevServer(root, port, { wireless = false } = {}) {
   return {
     url,
     token,
-    connectUrl: wireless ? `nuxtnative://connect?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}` : '',
+    connectUrlFor(applicationId = 'com.nuxtnative.prototype') {
+      if (!wireless) return ''
+      return `intent://connect?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}#Intent;scheme=nuxtnative;package=${encodeURIComponent(applicationId)};end`
+    },
     bump() { version += 1 },
     close() { server.close() }
   }
 }
 
-async function showWirelessQr(server) {
+async function showWirelessQr(server, applicationId) {
   console.log(`\n[nuxt-native] Scan this QR code with your phone camera to connect HMR:\n`)
-  console.log(await QRCode.toString(server.connectUrl, { type: 'terminal', small: true }))
+  console.log(await QRCode.toString(server.connectUrlFor(applicationId), { type: 'terminal', small: true }))
   console.log(`[nuxt-native] Wireless HMR: ${server.url}\n`)
+}
+
+async function applicationIdFor(projectRoot) {
+  try {
+    const config = JSON.parse(await readFile(join(projectRoot, 'nuxt-native.config.json'), 'utf8'))
+    return config.android?.applicationId ?? 'com.nuxtnative.prototype'
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw new Error(`Invalid nuxt-native.config.json: ${error.message}`)
+    return 'com.nuxtnative.prototype'
+  }
 }
 
 async function buildProject(values, options = {}) {
@@ -182,7 +195,7 @@ if (command === 'build') {
   const hmrPort = Number(optionValue(args, '--hmr-port') ?? '38765')
   const hmrServer = hmr ? startDevServer(resolve(androidOutput ?? join(projectRoot, 'android'), 'app/src/main/assets'), hmrPort, { wireless }) : null
   await buildProject(buildArgs, hmrServer ? { devServer: { url: hmrServer.url, token: hmrServer.token } } : {})
-  if (wireless) await showWirelessQr(hmrServer)
+  if (wireless) await showWirelessQr(hmrServer, await applicationIdFor(projectRoot))
   if (args.includes('--once')) process.exit(0)
   const stop = watchProject(projectRoot, async () => {
     await buildProject(buildArgs, hmrServer ? { devServer: { url: hmrServer.url, token: hmrServer.token } } : {})
@@ -227,7 +240,7 @@ if (command === 'build') {
   runProcess(adbPath, ['-s', selected, 'shell', 'am', 'force-stop', applicationId], { stdio: 'inherit' })
   runProcess(adbPath, ['-s', selected, 'shell', 'am', 'start', '-W', '-n', defaultActivity(applicationId)], { stdio: 'inherit' })
   if (hmrServer) {
-    if (wireless) await showWirelessQr(hmrServer)
+    if (wireless) await showWirelessQr(hmrServer, applicationId)
     const stop = watchProject(projectRoot, async () => {
       await buildProject(buildArgs, { devServer: { url: hmrServer.url, token: hmrServer.token } })
       hmrServer.bump()
