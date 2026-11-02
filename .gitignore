@@ -3,10 +3,6 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
-dev-app/android/.gradle/
-dev-app/android/build/
-dev-app/android/app/build/
-dev-app/android/local.properties
 *.iml
 .idea/
 pack-report.json

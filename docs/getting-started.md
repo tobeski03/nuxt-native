@@ -117,11 +117,12 @@ If USB HMR is inconvenient, use the wireless QR flow:
 npx nuxt-native run . --qr
 ```
 
-The CLI prints a QR code in the terminal. Install and open the **Nuxt-native Dev** companion app, then scan the QR code from inside that app. The phone and computer must be on the same Wi-Fi or local network. The QR contains a temporary connection token and is valid only while this command is running. Wireless HMR changes how the debug app receives route assets; it does not disable native APIs or change release builds.
+The CLI prints a QR code in the terminal. Scan it with your phone camera; Android will open the generated Nuxt-native debug app and connect it to the development server. The phone and computer must be on the same Wi-Fi or local network. The QR contains a temporary connection token and is valid only while this command is running. Wireless HMR changes how the debug app receives route assets; it does not disable native APIs or change release builds.
 
-Download the Dev App from the [GitHub Releases](https://github.com/tobeski03/nuxt-native/releases) page. The companion app includes its own QR scanner; your phone’s camera or a separate scanner is not part of the connection flow.
 
 This compiles the project, writes a local SDK path when one is discoverable, assembles the debug APK, installs it with ADB, and launches the configured Android activity. The `--serial`, `--adb`, and `--gradle` options are optional when the machine has one discoverable device and standard tools.
+
+If Gradle reports a damaged artifact-transform cache, the CLI automatically retries the build with a clean temporary Gradle cache. The first retry may take longer while Android dependencies are restored; later builds reuse that cache.
 
 ## Production artifacts
 

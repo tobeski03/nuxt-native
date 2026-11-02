@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { basename, dirname, extname, relative, sep } from 'node:path'
-import { build, transform } from 'esbuild'
+import { build, transform } from './esbuild.mjs'
 
 function stripExtension(file) {
   return file.replace(/\.(?:[cm]?[jt]s|tsx?)$/i, '')

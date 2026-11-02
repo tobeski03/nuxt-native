@@ -32,11 +32,16 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 public final class MainActivity extends Activity {
     private NativeRouter router;
     private NativeServer server;
     private String devServerBase = "";
     private String devServerToken = "";
+    private final ConcurrentHashMap<String, String> devAssetCache = new ConcurrentHashMap<>();
     private volatile boolean hmrRunning;
     private final Handler hmrHandler = new Handler(Looper.getMainLooper());
     private String hmrVersion = "";
@@ -46,9 +51,10 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         FrameLayout host = new FrameLayout(this);
         setContentView(host);
+        configureDevServer();
+        configureDevServerFromIntent(getIntent());
+        Runnable initialize = () -> {
         try {
-            configureDevServer();
-            configureDevServerFromIntent(getIntent());
             server = new NativeServer(this::readAsset);
             server.loadManifest();
             SharedPreferences preferences = getSharedPreferences("nuxt_native", MODE_PRIVATE);
@@ -168,6 +174,19 @@ public final class MainActivity extends Activity {
         } catch (Exception error) {
             android.util.Log.e("NuxtNative", "Unable to start native route host", error);
             showStartupError(host, error);
+        }
+        };
+        if (devServerBase.isEmpty()) {
+            initialize.run();
+        } else {
+            new Thread(() -> {
+                try {
+                    prepareDevAssets();
+                    runOnUiThread(initialize);
+                } catch (Exception error) {
+                    runOnUiThread(() -> showStartupError(host, error));
+                }
+            }, "nuxt-native-startup").start();
         }
     }
 
@@ -289,6 +308,57 @@ public final class MainActivity extends Activity {
         return readBundledAsset(name);
     }
 
+    private void prepareDevAssets() throws Exception {
+        ArrayList<String> pending = new ArrayList<>();
+        Set<String> queued = new HashSet<>();
+        String[] manifests = {"native-config.json", "server-routes.json", "server-middleware.json", "server-plugins.json", "routes.json", "middleware.json", "plugins.json", "public-assets.json", "error.ir.json", "error.script.js", "error.script.json"};
+        for (String manifest : manifests) {
+            pending.add(manifest);
+            queued.add(manifest);
+        }
+        for (int index = 0; index < pending.size(); index++) {
+            String name = pending.get(index);
+            String body;
+            try {
+                body = readDevAssetNetwork(name);
+            } catch (java.io.IOException error) {
+                if (name.startsWith("server-") || name.equals("middleware.json") || name.equals("plugins.json") || name.equals("public-assets.json") || name.startsWith("error.")) continue;
+                throw error;
+            }
+            devAssetCache.put(name, body);
+            try {
+                collectAssetNames(new JSONObject(body), pending, queued);
+            } catch (org.json.JSONException ignored) {
+                // Non-JSON assets do not contain additional asset references.
+            }
+        }
+    }
+
+    private void collectAssetNames(Object value, ArrayList<String> pending, Set<String> queued) throws org.json.JSONException {
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            java.util.Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                Object child = object.get(key);
+                if ("asset".equals(key) && child instanceof String) queueAssetBundle((String) child, pending, queued);
+                collectAssetNames(child, pending, queued);
+            }
+        } else if (value instanceof JSONArray) {
+            JSONArray array = (JSONArray) value;
+            for (int index = 0; index < array.length(); index++) collectAssetNames(array.get(index), pending, queued);
+        }
+    }
+
+    private void queueAssetBundle(String asset, ArrayList<String> pending, Set<String> queued) {
+        if (queued.add(asset)) pending.add(asset);
+        if (asset.endsWith(".ir.json")) {
+            String script = asset.substring(0, asset.length() - ".ir.json".length());
+            if (queued.add(script + ".script.js")) pending.add(script + ".script.js");
+            if (queued.add(script + ".script.json")) pending.add(script + ".script.json");
+        }
+    }
+
     private String readBundledAsset(String name) throws Exception {
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open(name)))) {
@@ -326,6 +396,14 @@ public final class MainActivity extends Activity {
     }
 
     private String readDevAsset(String name) throws Exception {
+        String cached = devAssetCache.get(name);
+        if (cached != null) return cached;
+        String body = readDevAssetNetwork(name);
+        devAssetCache.put(name, body);
+        return body;
+    }
+
+    private String readDevAssetNetwork(String name) throws Exception {
         String separator = devServerBase.contains("?") ? "&" : "?";
         String tokenQuery = devServerToken.isEmpty() ? "" : separator + "token=" + URLEncoder.encode(devServerToken, StandardCharsets.UTF_8.name());
         HttpURLConnection connection = (HttpURLConnection) new URL(devServerBase + "/" + name + tokenQuery).openConnection();
@@ -353,10 +431,11 @@ public final class MainActivity extends Activity {
         Thread poller = new Thread(() -> {
             while (hmrRunning) {
                 try {
-                    String status = readDevAsset("__nuxt_native_hmr");
+                    String status = readDevAssetNetwork("__nuxt_native_hmr");
                     String nextVersion = new JSONObject(status).optString("version", "");
                     if (!hmrVersion.isEmpty() && !hmrVersion.equals(nextVersion)) {
                         android.util.Log.i("NuxtNativeHMR", "Reloading route assets: " + hmrVersion + " -> " + nextVersion);
+                        prepareDevAssets();
                         hmrHandler.post(() -> {
                             try { if (router != null) router.reloadCurrent(); }
                             catch (Exception error) { if (router != null) router.showError(error); }

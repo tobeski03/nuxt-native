@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import vm from 'node:vm'
-import { transform } from 'esbuild'
+import { transform } from './esbuild.mjs'
 import { compileScopedTemplate, compileTemplate } from './compiler.mjs'
 import { componentName } from './framework/components.mjs'
 import { compilePageScript } from './script-compiler.mjs'
@@ -69,7 +69,19 @@ async function readProjectStaticConfig(root, candidates, name) {
     try {
       filename = join(root, candidate)
       const source = await readFile(filename, 'utf8')
-      const compiled = await transform(source, { loader: filename.endsWith('.ts') ? 'ts' : 'js', format: 'cjs', platform: 'node', target: 'es2020', sourcefile: filename })
+      let code
+      try {
+        code = (await transform(source, { loader: filename.endsWith('.ts') ? 'ts' : 'js', format: 'cjs', platform: 'node', target: 'es2020', sourcefile: filename })).code
+      } catch (error) {
+        if (error.code !== 'EBUSY') throw error
+        // Windows can temporarily lock esbuild's native helper. Static Nuxt config
+        // files do not need a full bundler, so keep config loading usable while the
+        // helper is unavailable.
+        if (/\bimport\s|interface\s+\w+|type\s+\w+\s*=/.test(source)) throw error
+        code = source
+          .replace(/^\s*export\s+default\s+/, 'module.exports = ')
+          .replace(/\s+as\s+const\b/g, '')
+      }
       const module = { exports: {} }
       const context = {
         module,
@@ -77,7 +89,7 @@ async function readProjectStaticConfig(root, candidates, name) {
         defineAppConfig: value => value,
         defineNuxtConfig: value => value
       }
-      vm.runInNewContext(compiled.code, context, { filename, timeout: 1000 })
+      vm.runInNewContext(code, context, { filename, timeout: 1000 })
       const value = module.exports?.default ?? module.exports
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name} must export an object`)
       return value

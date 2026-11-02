@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { access, readFile, stat, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { randomBytes } from 'node:crypto'
@@ -7,6 +7,7 @@ import { networkInterfaces } from 'node:os'
 import { watch } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import QRCode from 'qrcode'
 import { compileTemplate } from './compiler.mjs'
 import { createAndroidProject } from './android-project.mjs'
@@ -24,6 +25,37 @@ function runProcess(command, commandArgs, options = {}) {
   return result
 }
 
+async function runGradleProcess(command, commandArgs, options = {}) {
+  const isBatch = process.platform === 'win32' && /\.bat$/i.test(command)
+  const { stdio: _stdio, ...processOptions } = options
+  const result = spawnSync(command, commandArgs, {
+    ...processOptions,
+    encoding: 'utf8',
+    stdio: ['inherit', 'pipe', 'pipe'],
+    shell: isBatch ? (process.env.ComSpec ?? 'cmd.exe') : false
+  })
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  if (output) process.stdout.write(output)
+  if (result.error) throw result.error
+  if ((result.status ?? 1) === 0) return result
+
+  const cacheFailure = /artifact transform|immutable workspace|metadata\.bin|aapt2/i.test(output)
+  if (!cacheFailure || process.env.NUXT_NATIVE_GRADLE_RETRY === '0') process.exit(result.status ?? 1)
+
+  const fallbackHome = join(tmpdir(), 'nuxt-native-gradle-cache')
+  await mkdir(fallbackHome, { recursive: true })
+  console.error(`[nuxt-native] Gradle cache appears damaged; retrying with ${fallbackHome}`)
+  const retry = spawnSync(command, commandArgs, {
+    ...processOptions,
+    stdio: 'inherit',
+    shell: isBatch ? (process.env.ComSpec ?? 'cmd.exe') : false,
+    env: { ...process.env, ...options.env, GRADLE_USER_HOME: fallbackHome }
+  })
+  if (retry.error) throw retry.error
+  if ((retry.status ?? 1) !== 0) process.exit(retry.status ?? 1)
+  return retry
+}
+
 function optionValue(values, name) {
   const index = values.indexOf(name)
   if (index < 0) return null
@@ -31,7 +63,7 @@ function optionValue(values, name) {
   return values[index + 1]
 }
 
-function localNetworkAddress() {
+function localNetworkAddresses() {
   const candidates = []
   for (const [name, entries] of Object.entries(networkInterfaces())) {
     for (const entry of entries ?? []) {
@@ -42,15 +74,42 @@ function localNetworkAddress() {
     const wireless = value => /wi-?fi|wireless|wlan/i.test(value) ? 0 : 1
     return wireless(left.name) - wireless(right.name)
   })
+  return candidates
+}
+
+function localNetworkAddress() {
+  const candidates = localNetworkAddresses()
   if (candidates[0]) return candidates[0].address
   throw new Error('No local network address found. Connect this computer to Wi-Fi or Ethernet first.')
 }
 
-function startDevServer(root, port, { wireless = false } = {}) {
+function sameIpv4Subnet(left, right, prefix = 24) {
+  const leftParts = left.split('.').map(Number)
+  const rightParts = right.split('.').map(Number)
+  if (leftParts.length !== 4 || rightParts.length !== 4 || leftParts.some(Number.isNaN) || rightParts.some(Number.isNaN)) return false
+  const mask = prefix === 24 ? [255, 255, 255, 0] : prefix === 16 ? [255, 255, 0, 0] : [255, 0, 0, 0]
+  return mask.every((value, index) => (leftParts[index] & value) === (rightParts[index] & value))
+}
+
+function deviceNetworkAddress(adbPath, serial) {
+  const result = spawnSync(adbPath, ['-s', serial, 'shell', 'ip', 'route'], { encoding: 'utf8' })
+  if (result.error || result.status !== 0) return null
+  const routes = [...(result.stdout ?? '').matchAll(/^(\S+)\/(\d+).*?\bsrc\s+(\S+)/gm)]
+    .sort((left, right) => Number(right[2]) - Number(left[2]))
+  const candidates = localNetworkAddresses()
+  for (const candidate of candidates) {
+    for (const route of routes) {
+      if (sameIpv4Subnet(candidate.address, route[3], Number(route[2]))) return candidate.address
+    }
+  }
+  return null
+}
+
+function startDevServer(root, port, { wireless = false, qr = false, address: requestedAddress = null } = {}) {
   let version = 0
   const token = wireless ? randomBytes(18).toString('base64url') : ''
   const host = wireless ? '0.0.0.0' : '127.0.0.1'
-  const address = wireless ? localNetworkAddress() : '127.0.0.1'
+  const address = wireless ? (requestedAddress ?? localNetworkAddress()) : '127.0.0.1'
   const url = `http://${address}:${port}`
   const server = createServer(async (request, response) => {
     try {
@@ -90,8 +149,8 @@ function startDevServer(root, port, { wireless = false } = {}) {
   return {
     url,
     token,
-    connectUrlFor(_applicationId = 'com.nuxtnative.dev') {
-      if (!wireless) return ''
+    connectUrl() {
+      if (!qr) return ''
       return `nuxtnative://connect?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`
     },
     bump() { version += 1 },
@@ -99,20 +158,10 @@ function startDevServer(root, port, { wireless = false } = {}) {
   }
 }
 
-async function showWirelessQr(server, applicationId) {
-  console.log(`\n[nuxt-native] Open Nuxt-native Dev and scan this QR code to connect HMR:\n`)
-  console.log(await QRCode.toString(server.connectUrlFor(applicationId), { type: 'terminal', small: true }))
+async function showWirelessQr(server) {
+  console.log(`\n[nuxt-native] Scan this QR code with your phone camera to connect HMR:\n`)
+  console.log(await QRCode.toString(server.connectUrl(), { type: 'terminal', small: true }))
   console.log(`[nuxt-native] Wireless HMR: ${server.url}\n`)
-}
-
-async function applicationIdFor(projectRoot) {
-  try {
-    const config = JSON.parse(await readFile(join(projectRoot, 'nuxt-native.config.json'), 'utf8'))
-    return config.android?.applicationId ?? 'com.nuxtnative.prototype'
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw new Error(`Invalid nuxt-native.config.json: ${error.message}`)
-    return 'com.nuxtnative.prototype'
-  }
 }
 
 async function buildProject(values, options = {}) {
@@ -196,12 +245,32 @@ if (command === 'build') {
   const androidOutputArg = optionValue(args, '--android-output')
   const androidOutput = androidOutputArg ? resolve(androidOutputArg) : null
   const buildArgs = androidOutput ? [projectRoot, '--android-output', androidOutput] : [projectRoot]
-  const wireless = args.includes('--qr') || args.includes('--wireless')
-  const hmr = args.includes('--hmr') || wireless
+  const localQr = args.includes('--localhost') || args.includes('--usb')
+  const qr = args.includes('--qr')
+  const wireless = args.includes('--wireless') || (qr && !localQr)
+  const hmr = args.includes('--hmr') || qr || wireless
   const hmrPort = Number(optionValue(args, '--hmr-port') ?? '38765')
-  const hmrServer = hmr ? startDevServer(resolve(androidOutput ?? join(projectRoot, 'android'), 'app/src/main/assets'), hmrPort, { wireless }) : null
+  let wirelessAddress = null
+  if (wireless || localQr) {
+    try {
+      const adbPath = await findAndroidTool('adb', optionValue(args, '--adb'))
+      runProcess(adbPath, ['start-server'], { stdio: 'ignore' })
+      const devices = spawnSync(adbPath, ['devices'], { encoding: 'utf8' })
+      const selected = selectDevice(devices.stdout ?? '', optionValue(args, '--serial'))
+      wirelessAddress = deviceNetworkAddress(adbPath, selected)
+    } catch {
+      // `dev` remains usable without an attached Android device.
+    }
+  }
+  const hmrServer = hmr ? startDevServer(resolve(androidOutput ?? join(projectRoot, 'android'), 'app/src/main/assets'), hmrPort, { wireless, qr: qr || localQr, address: wirelessAddress }) : null
+  if (localQr) {
+    const adbPath = await findAndroidTool('adb', optionValue(args, '--adb'))
+    const devices = spawnSync(adbPath, ['devices'], { encoding: 'utf8' })
+    const selected = selectDevice(devices.stdout ?? '', optionValue(args, '--serial'))
+    runProcess(adbPath, ['-s', selected, 'reverse', `tcp:${hmrPort}`, `tcp:${hmrPort}`], { stdio: 'inherit' })
+  }
   await buildProject(buildArgs, hmrServer ? { devServer: { url: hmrServer.url, token: hmrServer.token } } : {})
-  if (wireless) await showWirelessQr(hmrServer, await applicationIdFor(projectRoot))
+  if (qr || localQr) await showWirelessQr(hmrServer)
   if (args.includes('--once')) process.exit(0)
   const stop = watchProject(projectRoot, async () => {
     await buildProject(buildArgs, hmrServer ? { devServer: { url: hmrServer.url, token: hmrServer.token } } : {})
@@ -218,22 +287,25 @@ if (command === 'build') {
   const androidOutput = resolve(androidOutputArg ?? join(projectRoot, 'android'))
   const serial = optionValue(args, '--serial')
   const gradlePath = optionValue(args, '--gradle')
-  const wireless = args.includes('--qr') || args.includes('--wireless')
-  const hmr = args.includes('--hmr') || wireless
+  const localQr = args.includes('--localhost') || args.includes('--usb')
+  const qr = args.includes('--qr')
+  const wireless = args.includes('--wireless') || (qr && !localQr)
+  const hmr = args.includes('--hmr') || qr || wireless
   const hmrPort = Number(optionValue(args, '--hmr-port') ?? '38765')
-  const hmrServer = hmr ? startDevServer(join(androidOutput, 'app/src/main/assets'), hmrPort, { wireless }) : null
   const adbPath = await findAndroidTool('adb', optionValue(args, '--adb'))
+  runProcess(adbPath, ['start-server'], { stdio: 'inherit' })
+  const devices = spawnSync(adbPath, ['devices'], { encoding: 'utf8' })
+  if (devices.error) throw devices.error
+  const selected = selectDevice(devices.stdout ?? '', serial)
+  const wirelessAddress = wireless ? deviceNetworkAddress(adbPath, selected) : null
+  const hmrServer = hmr ? startDevServer(join(androidOutput, 'app/src/main/assets'), hmrPort, { wireless, qr: qr || localQr, address: wirelessAddress }) : null
   const buildArgs = androidOutputArg ? [projectRoot, '--android-output', androidOutput] : [projectRoot]
   await buildProject(buildArgs, hmrServer ? { devServer: { url: hmrServer.url, token: hmrServer.token } } : {})
   const androidSdk = findAndroidSdk()
   if (androidSdk) await writeFile(join(androidOutput, 'local.properties'), `sdk.dir=${androidSdk.replaceAll('\\', '/')}\n`, 'utf8')
   const gradle = await findGradleTool(androidOutput, gradlePath)
-  runProcess(gradle, ['--no-daemon', '--console=plain', ':app:assembleDebug'], { cwd: androidOutput, stdio: 'inherit' })
+  await runGradleProcess(gradle, ['--no-daemon', '--console=plain', ':app:assembleDebug'], { cwd: androidOutput, stdio: 'inherit' })
   const apk = join(androidOutput, 'app/build/outputs/apk/debug/app-debug.apk')
-  runProcess(adbPath, ['start-server'], { stdio: 'inherit' })
-  const devices = spawnSync(adbPath, ['devices'], { encoding: 'utf8' })
-  if (devices.error) throw devices.error
-  const selected = selectDevice(devices.stdout ?? '', serial)
   if (hmrServer && !wireless) runProcess(adbPath, ['-s', selected, 'reverse', `tcp:${hmrPort}`, `tcp:${hmrPort}`], { stdio: 'inherit' })
   runProcess(adbPath, ['-s', selected, 'install', '-r', apk], { stdio: 'inherit' })
   let applicationId = 'com.nuxtnative.prototype'
@@ -246,7 +318,7 @@ if (command === 'build') {
   runProcess(adbPath, ['-s', selected, 'shell', 'am', 'force-stop', applicationId], { stdio: 'inherit' })
   runProcess(adbPath, ['-s', selected, 'shell', 'am', 'start', '-W', '-n', defaultActivity(applicationId)], { stdio: 'inherit' })
   if (hmrServer) {
-    if (wireless) await showWirelessQr(hmrServer, applicationId)
+    if (qr || localQr) await showWirelessQr(hmrServer)
     const stop = watchProject(projectRoot, async () => {
       await buildProject(buildArgs, { devServer: { url: hmrServer.url, token: hmrServer.token } })
       hmrServer.bump()
@@ -273,7 +345,7 @@ if (command === 'build') {
   const gradleArgs = ['--no-daemon', '--console=plain']
   if (profile.toLowerCase() === 'release') gradleArgs.push('-x', 'lintVitalRelease', '-x', 'lintVitalAnalyzeRelease', '-x', 'lintVitalReportRelease')
   gradleArgs.push(packageTask(profile, format))
-  runProcess(gradle, gradleArgs, { cwd: androidOutput, stdio: 'inherit' })
+  await runGradleProcess(gradle, gradleArgs, { cwd: androidOutput, stdio: 'inherit' })
   console.log(`Generated ${packageArtifact(androidOutput, profile, format)}`)
 } else if (command === 'help' || command === '--help' || command === '-h') {
   console.log('Usage:')

@@ -1,4 +1,4 @@
-import { build, transform } from 'esbuild'
+import { build, transform } from './esbuild.mjs'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 

@@ -1,4 +1,4 @@
-import { build, transform } from 'esbuild'
+import { build, transform } from './esbuild.mjs'
 import { dirname } from 'node:path'
 
 function middlewareName(file) {
