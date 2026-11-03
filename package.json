@@ -1,6 +1,6 @@
 {
   "name": "@tobeski03/nuxt-native",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": false,
   "bin": {
     "nuxt-native": "src/cli.mjs"
@@ -20,6 +20,10 @@
   "files": [
     "android/build.gradle",
     "android/settings.gradle",
+    "android/gradle.properties",
+    "android/gradlew",
+    "android/gradlew.bat",
+    "android/gradle/wrapper",
     "android/app/build.gradle",
     "android/app/libs",
     "android/app/src/main/AndroidManifest.xml",

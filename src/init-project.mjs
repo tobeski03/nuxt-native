@@ -31,7 +31,7 @@ export async function initProject(directory) {
         package: 'nuxt-native package .'
       },
       engines: { node: '>=20' },
-      devDependencies: { [frameworkPackage.name]: `^${frameworkPackage.version}` }
+      devDependencies: { [frameworkPackage.name]: frameworkPackage.version }
     }, null, 2)}\n`
   }
   await mkdir(root, { recursive: true })

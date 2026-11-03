@@ -7,10 +7,12 @@ Nuxt-native is a Node.js CLI and an Android host runtime. It lets a team keep a 
 - Node.js 20 or newer.
 - npm 10 or newer is recommended.
 - Android SDK with a platform and build tools matching the generated host.
-- Gradle, or a Gradle wrapper supplied by the generated host.
+- Android's Gradle wrapper is supplied by the generated host; no global Gradle installation is required.
 - A physical Android device or emulator for `run`.
 
 The compiler itself can generate assets without an Android device. Device builds additionally need ADB and an Android SDK. The CLI looks for `NUXT_NATIVE_ANDROID_SDK`, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and the standard Windows SDK location. `NUXT_NATIVE_ADB` and `NUXT_NATIVE_GRADLE` can pin executable paths.
+
+Each generated project includes a pinned Gradle wrapper. This keeps a fresh clone or a newly initialized app on the same Gradle version instead of depending on whichever Gradle happens to be installed globally. The first build may download that pinned distribution and Android dependencies.
 
 ## Install
 
@@ -122,7 +124,7 @@ The CLI prints a QR code in the terminal. Scan it with your phone camera; Androi
 
 This compiles the project, writes a local SDK path when one is discoverable, assembles the debug APK, installs it with ADB, and launches the configured Android activity. The `--serial`, `--adb`, and `--gradle` options are optional when the machine has one discoverable device and standard tools.
 
-If Gradle reports a damaged artifact-transform cache, the CLI automatically retries the build with a clean temporary Gradle cache. The first retry may take longer while Android dependencies are restored; later builds reuse that cache.
+If Gradle reports a damaged artifact-transform cache, the CLI automatically retries the build with a clean temporary Gradle cache. The first retry may take longer while Android dependencies are restored; later builds reuse that cache. Running the generated `android/gradlew` directly bypasses that CLI recovery path; use `npm run android` or `npx nuxt-native run .` for the supported workflow.
 
 ## Production artifacts
 

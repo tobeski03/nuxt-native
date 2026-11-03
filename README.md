@@ -19,7 +19,7 @@ npm install
 npm run android
 ```
 
-For local development, Node.js 20 or newer and an Android SDK are required. `run` also needs Gradle and ADB, plus a connected Android device or emulator.
+For local development, Node.js 20 or newer and an Android SDK are required. Generated projects include a pinned Gradle wrapper, so a global Gradle installation is not required. `run` also needs ADB, plus a connected Android device or emulator.
 
 ## Commands
 
@@ -47,6 +47,8 @@ npx nuxt-native package . --profile release --format aab
 ```
 
 Projects created with `init` include `dev`, `build`, `android`, `qr`, and `package` scripts. Run `npx nuxt-native help` for all CLI options. If Android tools are not found automatically, pass `--gradle`, `--adb`, or `--serial`, or configure `NUXT_NATIVE_ANDROID_SDK`, `NUXT_NATIVE_GRADLE`, and `NUXT_NATIVE_ADB`.
+
+The generated Android host also contains `gradlew`/`gradlew.bat` and pins its Gradle distribution. The CLI automatically retries a build with an isolated cache when it detects a damaged Gradle transform cache, so stale machine cache state does not require manual cleanup.
 
 `--hmr` is a debug development mode. It keeps the Android host installed while changed native route assets are served from the development machine and reloaded on the phone. It requires a connected, authorized device and is not included in release builds.
 

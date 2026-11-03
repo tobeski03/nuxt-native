@@ -15,6 +15,8 @@ test('creates a clean Android host without copying build state', async () => {
     })
     assert.match(await readFile(join(generated, '.nuxt-native-host.json'), 'utf8'), /nuxt-native/)
     assert.equal(await readFile(join(generated, 'settings.gradle'), 'utf8').then(Boolean), true)
+    assert.equal(await readFile(join(generated, 'gradlew.bat')).then(Boolean), true)
+    assert.equal(await readFile(join(generated, 'gradle/wrapper/gradle-wrapper.properties')).then(Boolean), true)
     await assert.rejects(readFile(join(generated, 'local.properties')))
     await assert.rejects(readFile(join(generated, 'app/build', 'missing.txt')))
   } finally {

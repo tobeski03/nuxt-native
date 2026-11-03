@@ -15,6 +15,9 @@ test('initializes a project with the default non-sensitive capabilities', async 
     assert.ok(result.files.includes('app/pages/index.vue'))
     assert.ok(result.files.includes('app.config.ts'))
     assert.match(await readFile(join(root, 'app.config.ts'), 'utf8'), /defineAppConfig/)
+    const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    const frameworkPackage = JSON.parse(await readFile(join(process.cwd(), 'package.json'), 'utf8'))
+    assert.equal(packageJson.devDependencies['@tobeski03/nuxt-native'], frameworkPackage.version)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
