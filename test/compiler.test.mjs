@@ -253,6 +253,45 @@ test('compiles native responsive and theme variants', () => {
   })
 })
 
+test('supports arbitrary Tailwind typography, responsive limits, and native form styling', () => {
+  const result = compileClasses("mx-auto box-border cursor-pointer font-[Inter,ui-sans-serif,system-ui] tracking-[.12em] leading-[1.5] rounded-[7px] focus:outline focus:outline-[3px] focus:outline-[#6474db33] accent-[#5969d8] max-[560px]:grid-cols-1")
+  assert.deepEqual(result.warnings, [])
+  assert.equal(result.style.alignSelf, 'center')
+  assert.equal(result.style.fontFamily, 'Inter,ui-sans-serif,system-ui')
+  assert.equal(result.style.letterSpacing, 0.12)
+  assert.equal(result.style.lineHeightMultiplier, 1.5)
+  assert.equal(result.style.borderRadius, 7)
+  assert.equal(result.style.accentColor, '#5969d8')
+  assert.deepEqual(result.stateStyles.focused, { borderWidth: 3, borderColor: '#6474db33' })
+  assert.deepEqual(result.responsiveStyles['max-[560px]'], { display: 'grid', gridColumns: 1 })
+})
+
+test('covers familiar typography, sizing, alignment, and max breakpoint utilities', () => {
+  const result = compileClasses('font-sans font-extrabold text-5xl leading-relaxed truncate w-auto h-screen min-w-full max-h-full self-center place-items-center max-sm:text-3xl')
+  assert.deepEqual(result.warnings, [])
+  assert.equal(result.style.fontFamily, 'sans-serif')
+  assert.equal(result.style.fontWeight, 800)
+  assert.equal(result.style.fontSize, 48)
+  assert.equal(result.style.lineHeightMultiplier, 1.625)
+  assert.equal(result.style.width, 'wrap')
+  assert.equal(result.style.height, 'screen')
+  assert.equal(result.style.minWidth, 'fill')
+  assert.equal(result.style.maxHeight, 'fill')
+  assert.equal(result.style.alignSelf, 'center')
+  assert.equal(result.style.justifyContent, 'center')
+  assert.deepEqual(result.responsiveStyles['max-sm'], { fontSize: 30 })
+})
+
+test('compiles native-feasible transform utilities', () => {
+  const result = compileClasses('rotate-6 scale-105 scale-x-95 translate-x-4 -translate-y-2')
+  assert.deepEqual(result.warnings, [])
+  assert.equal(result.style.rotation, 6)
+  assert.equal(result.style.scale, 1.05)
+  assert.equal(result.style.scaleX, 0.95)
+  assert.equal(result.style.translationX, 16)
+  assert.equal(result.style.translationY, -8)
+})
+
 test('composes responsive and theme variants with native interaction states', () => {
   const result = compileClasses('md:hover:bg-blue-600 dark:disabled:opacity-50')
   assert.deepEqual(result.warnings, [])
@@ -396,10 +435,21 @@ test('compiles native typography, border, and surface utilities', () => {
   assert.equal(node.style.opacity, 0.75)
 })
 
+test('compiles side borders for native separators', () => {
+  const result = compileClasses('border-t border-b-2 border-[#f0f1f4]')
+  assert.deepEqual(result.warnings, [])
+  assert.equal(result.style.borderTopWidth, 1)
+  assert.equal(result.style.borderBottomWidth, 2)
+  assert.equal(result.style.borderColor, '#f0f1f4')
+})
+
 test('compiles native animation utilities', () => {
-  const [fade, slide] = compileTemplate('<main><div class="animate-fade-in">Fade</div><div class="animate-slide-up">Slide</div></main>').nodes[0].children
+  const [fade, slide, spin, pulse, bounce] = compileTemplate('<main><div class="animate-fade-in">Fade</div><div class="animate-slide-up">Slide</div><div class="animate-spin">Spin</div><div class="animate-pulse">Pulse</div><div class="animate-bounce">Bounce</div></main>').nodes[0].children
   assert.equal(fade.style.animation, 'fade-in')
   assert.equal(slide.style.animation, 'slide-up')
+  assert.equal(spin.style.animation, 'spin')
+  assert.equal(pulse.style.animation, 'pulse')
+  assert.equal(bounce.style.animation, 'bounce')
 })
 
 test('preserves runtime class and style bindings for native refresh', () => {

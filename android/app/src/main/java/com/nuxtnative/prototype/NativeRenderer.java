@@ -273,7 +273,7 @@ public final class NativeRenderer {
                 View child = renderNode(childNode);
                 layout.addView(child, layout instanceof FrameLayout
                         ? frameChildParams(childNode.optJSONObject("style"))
-                        : childParams(childParentStyle, childNode.optJSONObject("style")));
+                        : childParams(childParentStyle, childNode.optJSONObject("style"), child));
             }
         } else if (view instanceof FrameLayout) {
             FrameLayout layout = (FrameLayout) view;
@@ -290,14 +290,14 @@ public final class NativeRenderer {
             JSONArray children = node.optJSONArray("children");
             if (children != null) for (int i = 0; i < children.length(); i++) {
                 View child = renderNode(children.getJSONObject(i));
-                layout.addView(child, childParams(style, children.getJSONObject(i).optJSONObject("style")));
+                layout.addView(child, childParams(style, children.getJSONObject(i).optJSONObject("style"), child));
             }
         } else if (view instanceof NativeFlowLayout) {
             NativeFlowLayout layout = (NativeFlowLayout) view;
             JSONArray children = node.optJSONArray("children");
             if (children != null) for (int i = 0; i < children.length(); i++) {
                 View child = renderNode(children.getJSONObject(i));
-                layout.addView(child, childParams(style, children.getJSONObject(i).optJSONObject("style")));
+                layout.addView(child, childParams(style, children.getJSONObject(i).optJSONObject("style"), child));
             }
         } else if (view instanceof TextView) ((TextView) view).setText(formatText("line-break".equals(type) ? "\n" : textContent(node), style));
         return view;
@@ -492,7 +492,7 @@ public final class NativeRenderer {
         for (int i = 0; i < selectedNodes.length(); i++) {
             JSONObject child = selectedNodes.getJSONObject(i);
             View view = renderNode(child);
-            wrapper.addView(view, childParams(node.optJSONObject("style"), child.optJSONObject("style")));
+            wrapper.addView(view, childParams(node.optJSONObject("style"), child.optJSONObject("style"), view));
         }
         nodeViews.put(node, wrapper);
         return wrapper;
@@ -695,7 +695,7 @@ public final class NativeRenderer {
             if (!indexName.isEmpty()) restoreState(indexName, previousIndex);
         }
         wrapper.removeAllViews();
-        for (ForItem item : next) wrapper.addView(item.view, childParams(null, null));
+        for (ForItem item : next) wrapper.addView(item.view, childParams(null, null, item.view));
         forItems.put(node, next);
     }
 
@@ -707,7 +707,7 @@ public final class NativeRenderer {
             JSONObject child = new JSONObject(children.getJSONObject(j).toString());
             itemNodes.add(child);
             View view = renderNode(child);
-            itemContainer.addView(view, childParams(null, child.optJSONObject("style")));
+            itemContainer.addView(view, childParams(null, child.optJSONObject("style"), view));
         }
         return new ForItem(itemKey, itemContainer, itemNodes);
     }
@@ -752,7 +752,7 @@ public final class NativeRenderer {
         for (int i = 0; i < children.length(); i++) {
             JSONObject child = children.getJSONObject(i);
             View view = renderNode(child);
-            wrapper.addView(view, childParams(null, child.optJSONObject("style")));
+            wrapper.addView(view, childParams(null, child.optJSONObject("style"), view));
         }
         return wrapper;
     }
@@ -1974,12 +1974,19 @@ public final class NativeRenderer {
     private void applyStyle(View view, JSONObject style) throws JSONException {
         if (style == null) return;
         if (style.has("animation")) animate(view, style.getString("animation"));
-        if (style.has("minWidth")) view.setMinimumWidth(Math.max(0, style.optInt("minWidth", 0)));
-        if (style.has("minHeight")) view.setMinimumHeight(Math.max(0, style.optInt("minHeight", 0)));
+        if (style.has("rotation")) view.setRotation((float) style.optDouble("rotation", 0.0));
+        if (style.has("scale")) { float scale = (float) style.optDouble("scale", 1.0); view.setScaleX(scale); view.setScaleY(scale); }
+        if (style.has("scaleX")) view.setScaleX((float) style.optDouble("scaleX", 1.0));
+        if (style.has("scaleY")) view.setScaleY((float) style.optDouble("scaleY", 1.0));
+        if (style.has("translationX")) view.setTranslationX((float) style.optDouble("translationX", 0.0));
+        if (style.has("translationY")) view.setTranslationY((float) style.optDouble("translationY", 0.0));
+        if (style.has("minWidth")) view.setMinimumWidth(Math.max(0, dimension(style, "minWidth", 0)));
+        if (style.has("minHeight")) view.setMinimumHeight(Math.max(0, dimension(style, "minHeight", 0)));
+        if (style.has("visibility")) view.setVisibility("invisible".equals(style.optString("visibility")) ? View.INVISIBLE : "gone".equals(style.optString("visibility")) || "collapse".equals(style.optString("visibility")) ? View.GONE : View.VISIBLE);
         if (view instanceof TextView) {
             TextView text = (TextView) view;
-            if (style.has("maxWidth")) text.setMaxWidth(Math.max(0, style.optInt("maxWidth", Integer.MAX_VALUE)));
-            if (style.has("maxHeight")) text.setMaxHeight(Math.max(0, style.optInt("maxHeight", Integer.MAX_VALUE)));
+            if (style.has("maxWidth")) text.setMaxWidth(Math.max(0, dimension(style, "maxWidth", Integer.MAX_VALUE)));
+            if (style.has("maxHeight")) text.setMaxHeight(Math.max(0, dimension(style, "maxHeight", Integer.MAX_VALUE)));
         }
         if (hasGradient(style)) view.setBackground(backgroundDrawable(style));
         else if (style.has("backgroundColor")) view.setBackgroundColor(parseColor(style.getString("backgroundColor")));
@@ -1989,8 +1996,16 @@ public final class NativeRenderer {
             if (style.has("color")) text.setTextColor(parseColor(style.getString("color")));
             if (style.has("fontSize")) text.setTextSize((float) style.getDouble("fontSize"));
             if (style.has("letterSpacing") && android.os.Build.VERSION.SDK_INT >= 21) text.setLetterSpacing((float) style.optDouble("letterSpacing", 0.0));
-            if (style.has("fontWeight") && style.getInt("fontWeight") >= 600) text.setTypeface(null, 1);
+            if (style.has("fontWeight")) {
+                int weight = style.optInt("fontWeight", 400);
+                if (android.os.Build.VERSION.SDK_INT >= 28) text.setTypeface(Typeface.create("sans-serif", Math.max(100, Math.min(900, weight)), false));
+                else text.setTypeface(null, weight >= 600 ? Typeface.BOLD : Typeface.NORMAL);
+            }
             if (style.has("fontStyle")) text.setTypeface(null, "italic".equals(style.optString("fontStyle")) ? 2 : 0);
+            if (style.has("fontFamily")) {
+                String family = style.optString("fontFamily", "").split(",")[0].trim().replace("'", "").replace("\"", "");
+                if (!family.isEmpty() && !"inherit".equals(family)) text.setTypeface(Typeface.create(family, text.getTypeface() == null ? Typeface.NORMAL : text.getTypeface().getStyle()));
+            }
             if (style.has("textDecoration")) {
                 String decoration = style.optString("textDecoration");
                 text.getPaint().setUnderlineText("underline".equals(decoration));
@@ -2005,6 +2020,19 @@ public final class NativeRenderer {
                 float lineHeight = (float) style.optDouble("lineHeight");
                 text.setLineSpacing(Math.max(0f, lineHeight - fontSize), 1f);
             }
+            if (style.has("lineHeightMultiplier") && style.has("fontSize")) {
+                float fontSize = (float) style.optDouble("fontSize");
+                float multiplier = (float) style.optDouble("lineHeightMultiplier", 1.0);
+                text.setLineSpacing(Math.max(0f, fontSize * multiplier - fontSize), 1f);
+            }
+            if ("nowrap".equals(style.optString("whiteSpace"))) text.setSingleLine(true);
+            if ("ellipsis".equals(style.optString("textOverflow"))) {
+                text.setSingleLine(true);
+                text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            }
+        }
+        if (view instanceof CompoundButton && style.has("accentColor") && android.os.Build.VERSION.SDK_INT >= 21) {
+            ((CompoundButton) view).setButtonTintList(ColorStateList.valueOf(parseColor(style.optString("accentColor"))));
         }
         if (view instanceof ImageView && style.has("objectFit")) {
             String fit = style.optString("objectFit", "contain");
@@ -2037,6 +2065,12 @@ public final class NativeRenderer {
             background.setColor(style.has("backgroundColor") ? parseColor(style.getString("backgroundColor")) : Color.TRANSPARENT);
             if (style.has("borderWidth")) background.setStroke(style.optInt("borderWidth", 1), parseColor(style.optString("borderColor", "#00000000")));
             view.setBackground(background);
+        }
+        if (style.has("borderTopWidth") || style.has("borderRightWidth") || style.has("borderBottomWidth") || style.has("borderLeftWidth")) {
+            view.setBackground(new SideBorderDrawable(view.getBackground(),
+                    style.optInt("borderTopWidth", 0), style.optInt("borderRightWidth", 0),
+                    style.optInt("borderBottomWidth", 0), style.optInt("borderLeftWidth", 0),
+                    parseColor(style.optString("borderColor", "#00000000"))));
         }
         if (style.has("opacity")) view.setAlpha((float) style.optDouble("opacity", 1.0));
         if (style.has("elevation")) view.setElevation((float) style.optDouble("elevation", 0.0));
@@ -2092,6 +2126,24 @@ public final class NativeRenderer {
             view.setScaleX(0.96f);
             view.setScaleY(0.96f);
             animator.alpha(1f).scaleX(1f).scaleY(1f).start();
+        } else if ("spin".equals(animation)) {
+            android.animation.ObjectAnimator spin = android.animation.ObjectAnimator.ofFloat(view, View.ROTATION, 0f, 360f);
+            spin.setDuration(Math.max(220L, duration));
+            spin.setInterpolator(interpolator(easing));
+            spin.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            spin.start();
+        } else if ("pulse".equals(animation)) {
+            android.animation.ObjectAnimator pulse = android.animation.ObjectAnimator.ofFloat(view, View.ALPHA, 1f, 0.5f, 1f);
+            pulse.setDuration(Math.max(220L, duration));
+            pulse.setInterpolator(interpolator(easing));
+            pulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            pulse.start();
+        } else if ("bounce".equals(animation)) {
+            android.animation.ObjectAnimator bounce = android.animation.ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, 0f, -8f, 0f);
+            bounce.setDuration(Math.max(220L, duration));
+            bounce.setInterpolator(interpolator(easing));
+            bounce.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            bounce.start();
         }
     }
 
@@ -2241,6 +2293,12 @@ public final class NativeRenderer {
             String[] names = { "sm", "md", "lg", "xl", "2xl" };
             int[] breakpoints = { 640, 768, 1024, 1280, 1536 };
             for (int index = 0; index < names.length; index++) if (width >= breakpoints[index]) mergeStyle(result, responsive.optJSONObject(names[index]));
+            java.util.Iterator<String> responsiveKeys = responsive.keys();
+            while (responsiveKeys.hasNext()) {
+                String key = responsiveKeys.next();
+                float limit = responsiveMax(key);
+                if (limit >= 0 && width <= limit) mergeStyle(result, responsive.optJSONObject(key));
+            }
         }
         JSONObject themes = node.optJSONObject("themeStyles");
         if (themes != null) {
@@ -2254,6 +2312,15 @@ public final class NativeRenderer {
         if (source == null) return;
         java.util.Iterator<String> keys = source.keys();
         while (keys.hasNext()) { String key = keys.next(); target.put(key, source.get(key)); }
+    }
+
+    private float responsiveMax(String key) {
+        int[] named = { 640, 768, 1024, 1280, 1536 };
+        String[] names = { "sm", "md", "lg", "xl", "2xl" };
+        for (int index = 0; index < names.length; index++) if (("max-" + names[index]).equals(key)) return named[index];
+        java.util.regex.Matcher arbitrary = java.util.regex.Pattern.compile("^max-\\[(\\d+(?:\\.\\d+)?)(px|rem)\\]$").matcher(key);
+        if (!arbitrary.matches()) return -1;
+        return Float.parseFloat(arbitrary.group(1)) * ("rem".equals(arbitrary.group(2)) ? 16f : 1f);
     }
 
     /** Apply Tailwind interaction variants through Android's native state system. */
@@ -2310,6 +2377,12 @@ public final class NativeRenderer {
             String[] names = { "sm", "md", "lg", "xl", "2xl" };
             int[] breakpoints = { 640, 768, 1024, 1280, 1536 };
             for (int index = 0; index < names.length; index++) if (width >= breakpoints[index]) mergeStateStyles(result, responsive.optJSONObject(names[index]));
+            java.util.Iterator<String> responsiveKeys = responsive.keys();
+            while (responsiveKeys.hasNext()) {
+                String key = responsiveKeys.next();
+                float limit = responsiveMax(key);
+                if (limit >= 0 && width <= limit) mergeStateStyles(result, responsive.optJSONObject(key));
+            }
         }
         JSONObject themes = node.optJSONObject("themeStateStyles");
         if (themes != null) {
@@ -2489,12 +2562,54 @@ public final class NativeRenderer {
         return colors.getOrDefault(name, name);
     }
 
+    private static final class SideBorderDrawable extends android.graphics.drawable.Drawable {
+        private final Drawable content;
+        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final int top;
+        private final int right;
+        private final int bottom;
+        private final int left;
+
+        SideBorderDrawable(Drawable content, int top, int right, int bottom, int left, int color) {
+            this.content = content;
+            this.top = Math.max(0, top);
+            this.right = Math.max(0, right);
+            this.bottom = Math.max(0, bottom);
+            this.left = Math.max(0, left);
+            paint.setColor(color);
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+        }
+
+        @Override public void draw(android.graphics.Canvas canvas) {
+            if (content != null) content.draw(canvas);
+            android.graphics.Rect bounds = getBounds();
+            if (top > 0) canvas.drawRect(bounds.left, bounds.top, bounds.right, bounds.top + top, paint);
+            if (right > 0) canvas.drawRect(bounds.right - right, bounds.top, bounds.right, bounds.bottom, paint);
+            if (bottom > 0) canvas.drawRect(bounds.left, bounds.bottom - bottom, bounds.right, bounds.bottom, paint);
+            if (left > 0) canvas.drawRect(bounds.left, bounds.top, bounds.left + left, bounds.bottom, paint);
+        }
+
+        @Override protected void onBoundsChange(android.graphics.Rect bounds) {
+            if (content != null) content.setBounds(bounds);
+        }
+
+        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); if (content != null) content.setAlpha(alpha); }
+        @Override public void setColorFilter(android.graphics.ColorFilter filter) { paint.setColorFilter(filter); if (content != null) content.setColorFilter(filter); }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
+    }
+
     private LinearLayout.LayoutParams childParams(JSONObject parentStyle, JSONObject childStyle) throws JSONException {
+        return childParams(parentStyle, childStyle, null);
+    }
+
+    private LinearLayout.LayoutParams childParams(JSONObject parentStyle, JSONObject childStyle, View child) throws JSONException {
         boolean row = parentStyle != null && "row".equals(parentStyle.optString("flexDirection"));
         boolean grid = parentStyle != null && parentStyle.optInt("gridColumns", 0) > 0;
-        int width = dimension(childStyle, "width", row ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT);
+        boolean contentSized = child instanceof Button;
+        int width = dimension(childStyle, "width", row || contentSized ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT);
         int height = dimension(childStyle, "height", ViewGroup.LayoutParams.WRAP_CONTENT);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, height);
+        if (childStyle != null && "center".equals(childStyle.optString("alignSelf"))) params.gravity = Gravity.CENTER_HORIZONTAL;
         if (!grid && childStyle != null && (childStyle.has("flex") || childStyle.has("flexGrow"))) {
             float weight = childStyle.has("flex") ? (float) childStyle.optDouble("flex", 0) : (float) childStyle.optDouble("flexGrow", 0);
             if (weight > 0) {
@@ -2556,11 +2671,28 @@ public final class NativeRenderer {
         if (style == null || !style.has(key)) return fallback;
         Object value = style.get(key);
         if ("fill".equals(value) || "screen".equals(value)) return ViewGroup.LayoutParams.MATCH_PARENT;
+        if ("wrap".equals(value)) return ViewGroup.LayoutParams.WRAP_CONTENT;
         if (value instanceof Number) return ((Number) value).intValue();
         return fallback;
     }
 
     private int parseColor(String value) {
-        try { return Color.parseColor(value); } catch (IllegalArgumentException ignored) { return Color.TRANSPARENT; }
+        if (value == null) return Color.TRANSPARENT;
+        String color = value.trim();
+        try {
+            if (color.matches("#[0-9a-fA-F]{8}")) {
+                String rgba = color.substring(1);
+                color = "#" + rgba.substring(6) + rgba.substring(0, 6);
+            }
+            java.util.regex.Matcher rgba = java.util.regex.Pattern.compile("rgba?\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)(?:\\s*,\\s*([0-9.]+))?\\s*\\)").matcher(color);
+            if (rgba.matches()) {
+                int red = Math.max(0, Math.min(255, Integer.parseInt(rgba.group(1))));
+                int green = Math.max(0, Math.min(255, Integer.parseInt(rgba.group(2))));
+                int blue = Math.max(0, Math.min(255, Integer.parseInt(rgba.group(3))));
+                int alpha = rgba.group(4) == null ? 255 : Math.max(0, Math.min(255, Math.round(Float.parseFloat(rgba.group(4)) * 255f)));
+                return Color.argb(alpha, red, green, blue);
+            }
+            return Color.parseColor(color);
+        } catch (IllegalArgumentException ignored) { return Color.TRANSPARENT; }
     }
 }

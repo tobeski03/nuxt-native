@@ -47,30 +47,38 @@ const COLORS = { transparent: 'transparent', white: '#ffffff', black: '#000000',
 
 const STATIC_UTILITIES = {
   flex: { display: 'flex' }, 'flex-1': { flex: 1 }, 'flex-auto': { flex: 1 }, 'flex-initial': { flex: 0 }, 'flex-none': { flex: 0 }, 'grow': { flexGrow: 1 }, 'grow-0': { flexGrow: 0 }, 'shrink': { flexShrink: 1 }, 'shrink-0': { flexShrink: 0 }, 'flex-row': { flexDirection: 'row' },
-  'flex-col': { flexDirection: 'column' }, 'flex-wrap': { flexWrap: 'wrap' }, 'grid': { display: 'grid' },
+  'flex-col': { flexDirection: 'column' }, 'flex-wrap': { flexWrap: 'wrap' }, 'flex-nowrap': { flexWrap: 'nowrap' }, 'grid': { display: 'grid' },
   static: { position: 'static' }, relative: { position: 'relative' }, absolute: { position: 'absolute' },
   'items-start': { alignItems: 'flex-start' }, 'items-center': { alignItems: 'center' },
   'items-end': { alignItems: 'flex-end' }, 'items-stretch': { alignItems: 'stretch' }, 'items-baseline': { alignItems: 'baseline' }, 'justify-start': { justifyContent: 'flex-start' },
-  'justify-center': { justifyContent: 'center' }, 'justify-end': { justifyContent: 'flex-end' },
+  'justify-center': { justifyContent: 'center' }, 'justify-end': { justifyContent: 'flex-end' }, 'justify-normal': { justifyContent: 'flex-start' }, 'justify-stretch': { justifyContent: 'stretch' },
   'justify-between': { justifyContent: 'space-between' }, 'justify-around': { justifyContent: 'space-around' }, 'justify-evenly': { justifyContent: 'space-evenly' },
+  'self-auto': { alignSelf: 'auto' }, 'self-start': { alignSelf: 'start' }, 'self-center': { alignSelf: 'center' }, 'self-end': { alignSelf: 'end' }, 'self-stretch': { alignSelf: 'stretch' },
+  'place-items-center': { alignItems: 'center', justifyContent: 'center' }, 'place-content-center': { alignContent: 'center' },
   'text-left': { textAlign: 'left' }, 'text-center': { textAlign: 'center' }, 'text-right': { textAlign: 'right' }, 'text-justify': { textAlign: 'justify' },
-  'font-normal': { fontWeight: 400 }, 'font-medium': { fontWeight: 500 }, 'font-semibold': { fontWeight: 600 }, 'font-bold': { fontWeight: 700 },
+  'font-thin': { fontWeight: 100 }, 'font-extralight': { fontWeight: 200 }, 'font-light': { fontWeight: 300 }, 'font-normal': { fontWeight: 400 }, 'font-medium': { fontWeight: 500 }, 'font-semibold': { fontWeight: 600 }, 'font-bold': { fontWeight: 700 }, 'font-extrabold': { fontWeight: 800 }, 'font-black': { fontWeight: 900 },
+  'font-sans': { fontFamily: 'sans-serif' }, 'font-serif': { fontFamily: 'serif' }, 'font-mono': { fontFamily: 'monospace' },
   italic: { fontStyle: 'italic' }, 'not-italic': { fontStyle: 'normal' },
   uppercase: { textTransform: 'uppercase' }, lowercase: { textTransform: 'lowercase' }, capitalize: { textTransform: 'capitalize' }, 'normal-case': { textTransform: 'none' },
   underline: { textDecoration: 'underline' }, 'line-through': { textDecoration: 'line-through' }, 'no-underline': { textDecoration: 'none' },
   'text-xs': { fontSize: 12 }, 'text-sm': { fontSize: 14 }, 'text-base': { fontSize: 16 },
-  'text-lg': { fontSize: 18 }, 'text-xl': { fontSize: 20 }, 'text-2xl': { fontSize: 24 }, 'text-3xl': { fontSize: 30 },
-  'w-full': { width: 'fill' }, 'h-full': { height: 'fill' }, 'min-h-screen': { minHeight: 'screen' },
-  'max-w-full': { maxWidth: 'fill' }, 'rounded-none': { borderRadius: 0 }, 'rounded-sm': { borderRadius: 2 },
+  'text-lg': { fontSize: 18 }, 'text-xl': { fontSize: 20 }, 'text-2xl': { fontSize: 24 }, 'text-3xl': { fontSize: 30 }, 'text-4xl': { fontSize: 36 }, 'text-5xl': { fontSize: 48 }, 'text-6xl': { fontSize: 60 }, 'text-7xl': { fontSize: 72 }, 'text-8xl': { fontSize: 96 }, 'text-9xl': { fontSize: 128 },
+  'w-auto': { width: 'wrap' }, 'h-auto': { height: 'wrap' }, 'w-full': { width: 'fill' }, 'h-full': { height: 'fill' }, 'w-screen': { width: 'screen' }, 'h-screen': { height: 'screen' }, 'min-w-full': { minWidth: 'fill' }, 'min-h-full': { minHeight: 'fill' }, 'min-h-screen': { minHeight: 'screen' },
+  'max-w-full': { maxWidth: 'fill' }, 'max-h-full': { maxHeight: 'fill' }, 'rounded-none': { borderRadius: 0 }, 'rounded-sm': { borderRadius: 2 },
   rounded: { borderRadius: 4 }, 'rounded-lg': { borderRadius: 8 }, 'rounded-xl': { borderRadius: 12 },
-  'rounded-2xl': { borderRadius: 16 }, 'rounded-full': { borderRadius: 9999 },
+  'rounded-2xl': { borderRadius: 16 }, 'rounded-3xl': { borderRadius: 24 }, 'rounded-full': { borderRadius: 9999 },
   'shadow-none': { elevation: 0 }, 'shadow-sm': { elevation: 1 }, shadow: { elevation: 2 },
   'shadow-md': { elevation: 4 }, 'shadow-lg': { elevation: 8 }, 'shadow-xl': { elevation: 12 }, 'shadow-2xl': { elevation: 16 }, 'overflow-hidden': { overflow: 'hidden' }, 'overflow-auto': { overflow: 'auto' }, 'overflow-y-auto': { overflowY: 'auto' }, 'overflow-y-scroll': { overflowY: 'scroll' }, 'overflow-x-auto': { overflowX: 'auto' }, 'overflow-x-scroll': { overflowX: 'scroll' },
   'object-contain': { objectFit: 'contain' }, 'object-cover': { objectFit: 'cover' }, 'object-fill': { objectFit: 'fill' }, 'object-none': { objectFit: 'none' },
   'tracking-tighter': { letterSpacing: -0.05 }, 'tracking-tight': { letterSpacing: -0.025 }, 'tracking-normal': { letterSpacing: 0 }, 'tracking-wide': { letterSpacing: 0.025 }, 'tracking-wider': { letterSpacing: 0.05 }, 'tracking-widest': { letterSpacing: 0.1 },
   'opacity-50': { opacity: 0.5 }, 'opacity-75': { opacity: 0.75 }, 'opacity-100': { opacity: 1 },
+  visible: { visibility: 'visible' }, invisible: { visibility: 'invisible' }, collapse: { visibility: 'collapse' },
+  truncate: { textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, 'text-ellipsis': { textOverflow: 'ellipsis' }, 'text-clip': { textOverflow: 'clip' },
+  'whitespace-normal': { whiteSpace: 'normal' }, 'whitespace-nowrap': { whiteSpace: 'nowrap' }, 'whitespace-pre': { whiteSpace: 'pre' },
+  'leading-none': { lineHeightMultiplier: 1 }, 'leading-tight': { lineHeightMultiplier: 1.25 }, 'leading-snug': { lineHeightMultiplier: 1.375 }, 'leading-normal': { lineHeightMultiplier: 1.5 }, 'leading-relaxed': { lineHeightMultiplier: 1.625 }, 'leading-loose': { lineHeightMultiplier: 2 },
+  'box-border': {}, 'cursor-pointer': {},
   'animate-fade-in': { animation: 'fade-in' }, 'animate-slide-up': { animation: 'slide-up' },
-  'animate-scale-in': { animation: 'scale-in' }
+  'animate-scale-in': { animation: 'scale-in' }, 'animate-spin': { animation: 'spin' }, 'animate-pulse': { animation: 'pulse' }, 'animate-bounce': { animation: 'bounce' }
 }
 
 // Tailwind's default spacing scale expressed in Android dp. The compiler
@@ -128,6 +136,12 @@ function utilityStyle(utility, colors) {
   if (negative && (normalizedUtility.startsWith('p-') || normalizedUtility.startsWith('gap-') || normalizedUtility.startsWith('space-'))) return undefined
   if (!negative && STATIC_UTILITIES[utility]) return STATIC_UTILITIES[utility]
 
+  if (!negative && normalizedUtility === 'mx-auto') return { alignSelf: 'center' }
+
+  const fontFamilyMatch = normalizedUtility.match(/^font-\[(.+)\]$/)
+  if (!negative && fontFamilyMatch) return { fontFamily: fontFamilyMatch[1].replace(/_/g, ' ') }
+  if (!negative && /^\[font:.+\]$/.test(normalizedUtility)) return {}
+
   const gridColumnsMatch = normalizedUtility.match(/^grid-cols-([1-9]|1[0-2])$/)
   if (!negative && gridColumnsMatch) return { display: 'grid', gridColumns: Number(gridColumnsMatch[1]) }
 
@@ -163,6 +177,13 @@ function utilityStyle(utility, colors) {
     if (value !== undefined) return { color: value }
   }
 
+  const trackingArbitrary = normalizedUtility.match(/^tracking-\[(.+)\]$/)
+  if (!negative && trackingArbitrary) {
+    const raw = trackingArbitrary[1].replace(/_/g, ' ')
+    if (/^-?(?:\d+(\.\d+)?|\.\d+)em$/.test(raw)) return { letterSpacing: Number.parseFloat(raw) }
+    if (/^-?(?:\d+(\.\d+)?|\.\d+)px$/.test(raw)) return { letterSpacing: Number.parseFloat(raw) / 16 }
+  }
+
   const spacingMatch = normalizedUtility.match(/^(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|space-x|space-y)-(.+)$/)
   if (spacingMatch) {
     const value = spacingValue(spacingMatch[2])
@@ -185,6 +206,25 @@ function utilityStyle(utility, colors) {
     return { [property]: value }
   }
 
+  const rotateMatch = normalizedUtility.match(/^rotate-(-?(?:\d+(?:\.\d+)?|\.\d+)(?:deg)?|\[.+\])$/)
+  if (!negative && rotateMatch) {
+    const raw = rotateMatch[1].startsWith('[') ? parseArbitrary(rotateMatch[1]) : rotateMatch[1]
+    const value = Number.parseFloat(String(raw))
+    if (Number.isFinite(value)) return { rotation: value }
+  }
+  const scaleMatch = normalizedUtility.match(/^scale(?:-([xy]))?-([\d.]+|\[.+\])$/)
+  if (!negative && scaleMatch) {
+    const arbitrary = scaleMatch[2].startsWith('[')
+    const raw = arbitrary ? parseArbitrary(scaleMatch[2]) : scaleMatch[2]
+    const value = Number.parseFloat(String(raw)) / (arbitrary ? 1 : 100)
+    if (Number.isFinite(value)) return { [scaleMatch[1] === 'x' ? 'scaleX' : scaleMatch[1] === 'y' ? 'scaleY' : 'scale']: value }
+  }
+  const translateMatch = normalizedUtility.match(/^translate-([xy])-(.+)$/)
+  if (translateMatch) {
+    const value = spacingValue(translateMatch[2])
+    if (value !== undefined) return { [translateMatch[1] === 'x' ? 'translationX' : 'translationY']: negative ? -value : value }
+  }
+
   const insetMatch = normalizedUtility.match(/^(inset-x|inset-y|inset|top|right|bottom|left)-(.+)$/)
   if (insetMatch) {
     const value = spacingValue(insetMatch[2])
@@ -203,16 +243,53 @@ function utilityStyle(utility, colors) {
 
   const borderMatch = normalizedUtility.match(/^border(?:-(\d+))?$/)
   if (borderMatch) return { borderWidth: Number(borderMatch[1] ?? 1) }
+  const borderSideMatch = normalizedUtility.match(/^border-(t|r|b|l)(?:-(\d+))?$/)
+  if (!negative && borderSideMatch) {
+    const property = { t: 'borderTopWidth', r: 'borderRightWidth', b: 'borderBottomWidth', l: 'borderLeftWidth' }[borderSideMatch[1]]
+    return { [property]: Number(borderSideMatch[2] ?? 1) }
+  }
   const borderColorMatch = normalizedUtility.match(/^border-(.+)$/)
   if (borderColorMatch) {
     const value = colorValue(borderColorMatch[1], colors)
     if (value !== undefined) return { borderColor: withOpacity(value, undefined) }
+  }
+  const roundedArbitrary = normalizedUtility.match(/^rounded-\[(.+)\]$/)
+  if (!negative && roundedArbitrary) {
+    const value = spacingValue(`[${roundedArbitrary[1]}]`)
+    if (value !== undefined) return { borderRadius: value }
+  }
+  if (!negative && normalizedUtility === 'outline') return { borderWidth: 1 }
+  const outlineWidth = normalizedUtility.match(/^outline-\[(.+px)\]$/)
+  if (!negative && outlineWidth) return { borderWidth: Number.parseFloat(outlineWidth[1]) }
+  const outlineColor = normalizedUtility.match(/^outline-(.+)$/)
+  if (!negative && outlineColor) {
+    const value = colorValue(outlineColor[1], colors)
+    if (value !== undefined) return { borderColor: value }
+  }
+  const accent = normalizedUtility.match(/^accent-(.+)$/)
+  if (!negative && accent) {
+    const value = colorValue(accent[1], colors)
+    if (value !== undefined) return { accentColor: value }
   }
   const leadingMatch = normalizedUtility.match(/^leading-(\d+)$/)
   if (leadingMatch) {
     const leading = spacingValue(leadingMatch[1])
     if (leading !== undefined) return { lineHeight: leading }
   }
+  const leadingArbitrary = normalizedUtility.match(/^leading-\[(.+)\]$/)
+  if (!negative && leadingArbitrary) {
+    const raw = leadingArbitrary[1].replace(/_/g, ' ')
+    if (/^\d+(\.\d+)?$/.test(raw)) return { lineHeightMultiplier: Number.parseFloat(raw) }
+    const value = spacingValue(`[${raw}]`)
+    if (value !== undefined) return { lineHeight: value }
+  }
+  return undefined
+}
+
+function responsiveVariant(variant) {
+  if (['sm', 'md', 'lg', 'xl', '2xl'].includes(variant)) return variant
+  if (/^max-(sm|md|lg|xl|2xl)$/.test(variant)) return variant
+  if (/^max-\[\d+(\.\d+)?(px|rem)\]$/.test(variant)) return variant
   return undefined
 }
 
@@ -230,13 +307,13 @@ export function compileClasses(className = '', options = {}) {
     const utility = pieces.pop()
     const variants = pieces
     const supportedVariants = new Set(['2xl', 'active', 'dark', 'disabled', 'focus', 'hover', 'light', 'lg', 'md', 'pressed', 'selected', 'sm', 'xl'])
-    if (variants.some(variant => !supportedVariants.has(variant))) {
+    if (variants.some(variant => !supportedVariants.has(variant) && !responsiveVariant(variant))) {
       warnings.push(`Unsupported native variant: ${token}`)
       continue
     }
     const declaration = utilityStyle(utility, colors)
     if (declaration && variants.length) {
-      const responsive = variants.filter(variant => ['sm', 'md', 'lg', 'xl', '2xl'].includes(variant))
+      const responsive = variants.filter(variant => responsiveVariant(variant))
       const theme = variants.filter(variant => variant === 'dark' || variant === 'light')
       const interaction = variants.filter(variant => ['active', 'disabled', 'focus', 'hover', 'pressed', 'selected'].includes(variant))
       if (responsive.length > 1 || theme.length > 1 || interaction.length > 1 || (responsive.length && theme.length) || (responsive.length + theme.length + interaction.length !== variants.length)) {
