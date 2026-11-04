@@ -23,3 +23,10 @@ test('creates a clean Android host without copying build state', async () => {
     await rm(output, { recursive: true, force: true })
   }
 })
+
+test('uses the Android API-compatible weighted Typeface overload', async () => {
+  const renderer = await readFile(join(process.cwd(), 'android/app/src/main/java/com/nuxtnative/prototype/NativeRenderer.java'), 'utf8')
+  assert.match(renderer, /Typeface base = Typeface\.create\("sans-serif", Typeface\.NORMAL\)/)
+  assert.match(renderer, /Typeface\.create\(base, Math\.max\(100, Math\.min\(900, weight\)\), false\)/)
+  assert.doesNotMatch(renderer, /Typeface\.create\("sans-serif", Math\.max\(100, Math\.min\(900, weight\)\), false\)/)
+})

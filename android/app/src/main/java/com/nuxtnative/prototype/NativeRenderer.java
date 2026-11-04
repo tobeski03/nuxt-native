@@ -1998,7 +1998,10 @@ public final class NativeRenderer {
             if (style.has("letterSpacing") && android.os.Build.VERSION.SDK_INT >= 21) text.setLetterSpacing((float) style.optDouble("letterSpacing", 0.0));
             if (style.has("fontWeight")) {
                 int weight = style.optInt("fontWeight", 400);
-                if (android.os.Build.VERSION.SDK_INT >= 28) text.setTypeface(Typeface.create("sans-serif", Math.max(100, Math.min(900, weight)), false));
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    Typeface base = Typeface.create("sans-serif", Typeface.NORMAL);
+                    text.setTypeface(Typeface.create(base, Math.max(100, Math.min(900, weight)), false));
+                }
                 else text.setTypeface(null, weight >= 600 ? Typeface.BOLD : Typeface.NORMAL);
             }
             if (style.has("fontStyle")) text.setTypeface(null, "italic".equals(style.optString("fontStyle")) ? 2 : 0);
